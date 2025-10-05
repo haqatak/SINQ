@@ -64,8 +64,8 @@ class Quantizer:
 
     bit_to_packing = {
         8: "8bit_u8",
-        6: "6bit_32",  
-        5: "5bit_32", 
+        6: "6bit_32",
+        5: "5bit_32",
         4: "4bit_u8",
         3: "3bit_32",
         2: "2bit_u8",

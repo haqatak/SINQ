@@ -19,7 +19,7 @@
 ---
 
 ## 🚀 Welcome to the **official SINQ repository**!
-  
+
 **SINQ** (Sinkhorn-Normalized Quantization) is a **novel, fast and high-quality quantization method** designed to make any Large Language Models **smaller** while keeping their accuracy almost intact.
 
 ### 🔍 What You’ll Find Here
@@ -72,7 +72,7 @@ Conventional quantization uses **one scale per weight dimension**, which makes m
   <img src="imgs/error.png" alt="Error Distribution Comparison" width="370" align="right" style="margin-left: 20px;"/>
 </p>
 
-With standard single-scale quantization, errors tend to **cluster around outliers**.  
+With standard single-scale quantization, errors tend to **cluster around outliers**.
 With **SINQ**, they become **spread out and less severe**, preserving model accuracy even at **3 bit precision**. This improvement is driven by SINQ’s **Sinkhorn-normalized optimization**, which iteratively rescales rows and columns to balance their variance - a process inspired by Sinkhorn matrix normalization. By reducing the overall **_matrix imbalance_** (refer to the paper for more info), weights become inherently easier to quantize, leading to more stable behavior across layers and consistently higher accuracy even at very low bit-widths.
 
 
@@ -84,14 +84,14 @@ With **SINQ**, they become **spread out and less severe**, preserving model accu
 <summary>Click to expand a quick explanation on why you should use SINQ to quantize your LLM</summary>
 
 
-#### **SINQ (calibration-free)**  
-- **Higher LLM quality** and **~2× faster** quantization than **HQQ** 
+#### **SINQ (calibration-free)**
+- **Higher LLM quality** and **~2× faster** quantization than **HQQ**
 - **>31× faster** quantization process and comparable or better LLM quality compared to **AWQ / GPTQ**
-- **Model-agnostic**: works without knowing the specific LLM architecture, unlike **QuaRot**  
-- **Training-free**: it does not require end-to-end training, unlike **SpinQuant** or **KurTail** 
+- **Model-agnostic**: works without knowing the specific LLM architecture, unlike **QuaRot**
+- **Training-free**: it does not require end-to-end training, unlike **SpinQuant** or **KurTail**
 - **Additionally, A-SINQ (calibrated)** further **beats AWQ, GPTQ, and Hadamard+GPTQ** on quality while achieving **>4× faster** quantization time.
 
-**Example**  
+**Example**
 - ⏱️ SINQ quantizes **Qwen3-14B** in just **~21 sec** and **DeepSeekV2.5-236B** in **~5 min** on a single GPU
 - 💾 Enables you to **run DeepSeekV2.5-236B** on a single GPU with **~110 GB** of memory (vs ~472 GB) while losing **< 1 ppl** on **WikiText2** and **C4**
 </details>
@@ -137,12 +137,13 @@ quant_cfg = BaseQuantizeConfig(
     method="sinq"       # quantization method ("asinq" for the calibrated version)
 )
 
+# SINQ automatically detects and uses the best available device (CUDA, MPS for Apple Silicon, or CPU).
+# To override this, you can specify the device manually, e.g., device="cuda:0" or device="mps".
 AutoSINQHFModel.quantize_model(
     model,
     tokenizer=tokenizer,
     quant_config=quant_cfg,
-    compute_dtype=torch.bfloat16,
-    device="cuda:0"
+    compute_dtype=torch.bfloat16
 )
 ```
 
@@ -150,7 +151,7 @@ AutoSINQHFModel.quantize_model(
 
 ### Optional Flags
 
-You can further customize the quantization process to balance **accuracy** and **memory** for your needs.  
+You can further customize the quantization process to balance **accuracy** and **memory** for your needs.
 Here’s a summary of the main arguments you can tune:
 
 | Flag | Description | Options | Default |
@@ -182,15 +183,16 @@ AutoSINQHFModel.save_quantized(model, save_dir, verbose=True) # model is an alre
 from sinq.patch_model import AutoSINQHFModel
 import torch
 
+# SINQ automatically detects and uses the best available device (CUDA, MPS for Apple Silicon, or CPU).
+# To override this, you can specify the device manually, e.g., device="cuda:0" or device="mps".
 qmodel = AutoSINQHFModel.from_quantized(
     save_dir,
-    device="cuda:0",
-    compute_dtype=torch.bfloat16, 
+    compute_dtype=torch.bfloat16,
 )
 
 # (optional) quick smoke test
 prompt = "Explain neural network quantization in one sentence."
-inputs = tokenizer(prompt, return_tensors="pt").to("cuda:0")
+inputs = tokenizer(prompt, return_tensors="pt").to(qmodel.device)
 with torch.inference_mode():
     out_ids = qmodel.generate(**inputs, max_new_tokens=32, do_sample=False)
 print(tokenizer.decode(out_ids[0], skip_special_tokens=True))
@@ -205,13 +207,12 @@ from lm_eval import evaluator
 from lm_eval.models.huggingface import HFLM
 
 # Wrap the already quantized model and tokenizer with HFLM
-lm = HFLM(pretrained=model, tokenizer=tokenizer, device="cuda:0")
+lm = HFLM(pretrained=qmodel, tokenizer=tokenizer)
 
 # Evaluate (many tasks available on lm-eval such as MMLU and HellaSwag)
 results = evaluator.simple_evaluate(
     model=lm,
-    tasks=["lambada_openai"],  # small and fast benchmark
-    device="cuda:0"
+    tasks=["lambada_openai"]  # small and fast benchmark
 )
 ```
 
@@ -244,10 +245,10 @@ python quant_model_eval.py
 
 By default, this will run SINQ with the following settings:
 
-- ✅ 4-bit weight quantization  
-- ✅ Dual-scale + shift parameterization  
-- ✅ 1D tiling  
-- ✅ Group size = 64  
+- ✅ 4-bit weight quantization
+- ✅ Dual-scale + shift parameterization
+- ✅ 1D tiling
+- ✅ Group size = 64
 
 ---
 
@@ -293,7 +294,7 @@ Customize experiments with the following command-line arguments:
 | `--tiling_mode` | Strategy for tiling weight matrices during quantization | 1D, 2D | 1D |
 | `--group_size` | Number of weights processed together as a quantization group | 64, 128 | 64 |
 
-> 📝 **Note:** All results reported in the paper were obtained using the evaluation framework from [Efficient-ML/Qwen3-Quantization](https://github.com/Efficient-ML/Qwen3-Quantization) rather than `lm-eval`. 
+> 📝 **Note:** All results reported in the paper were obtained using the evaluation framework from [Efficient-ML/Qwen3-Quantization](https://github.com/Efficient-ML/Qwen3-Quantization) rather than `lm-eval`.
 </details>
 
 ## 5. Ongoing updates on new features and integrations
@@ -301,9 +302,9 @@ Customize experiments with the following command-line arguments:
 We are actively expanding SINQ with new features and integrations. Stay tuned here for the latest updates:
 
 - **26/09/2025** - SINQ paper released on [**arXiv**](https://arxiv.org/abs/2509.22944)
-- **30/09/2025** - SINQ GitHub repository made public  
+- **30/09/2025** - SINQ GitHub repository made public
 - **02/10/2025** - SINQ paper featured on 🤗 [**Hugging Face Papers**](https://huggingface.co/papers/2509.22944)
-- 🔜 **Coming soon** – 🤗 Integration with **Hugging Face Transformers**  
+- 🔜 **Coming soon** – 🤗 Integration with **Hugging Face Transformers**
 - 🔜 **Coming soon** – 📦 Pre-quantized **SINQ models** available on Hugging Face Hub
 
 ## 6. How to Cite This Work
@@ -312,7 +313,7 @@ If you find **SINQ** useful in your research or applications, please cite our <a
 
 ```bibtex
 @misc{muller2025sinq,
-      title={SINQ: Sinkhorn-Normalized Quantization for Calibration-Free Low-Precision LLM Weights}, 
+      title={SINQ: Sinkhorn-Normalized Quantization for Calibration-Free Low-Precision LLM Weights},
       author={Lorenz K. Muller and Philippe Bich and Jiawei Zhuang and Ahmet Celik and Luca Benfenati and Lukas Cavigelli},
       year={2025},
       eprint={2509.22944},
@@ -327,15 +328,7 @@ If you find **SINQ** useful in your research or applications, please cite our <a
 
 This project builds upon and extends the excellent work from the following open-source projects:
 
-- [**Qwen3-Quantization**](https://github.com/Efficient-ML/Qwen3-Quantization) - Base implementation and evaluation scripts for Qwen3 quantization.  
+- [**Qwen3-Quantization**](https://github.com/Efficient-ML/Qwen3-Quantization) - Base implementation and evaluation scripts for Qwen3 quantization.
 - [**HQQ**](https://github.com/mobiusml/hqq) - High-quality calibration-free quantization baseline.
 
 📜 You can find their original licenses in the corresponding `LICENSE` files in these repositories.
-
-
-
-
-
-
-
-
